@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PoupeJá — Compara preços de supermercado em Portugal</title>
+<meta name="description" content="Compara preços do Continente, Pingo Doce e Lidl em tempo real. Sabe sempre onde comprar mais barato.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛒</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- ⚠️  SUBSTITUI ESTES DOIS VALORES PELOS TEUS DO SUPABASE -->
+<script>
+  const SUPABASE_URL = "https://torebfvtawpjxpbtsyap";
+  const SUPABASE_KEY = "sb_publishable_mSa6gugpXTq3a0Bzl0nAXA_Puc-vjCy";
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+:root {
+  --green:#1a6b3c; --green-light:#e8f5ee; --green-mid:#2d9e5f; --green-pale:#f0faf4;
+  --orange:#e85d04; --orange-light:#fff3ec;
+  --red:#dc2626; --red-light:#fef2f2;
+  --blue:#1d4ed8; --blue-light:#eff6ff;
+  --gray-50:#f9fafb; --gray-100:#f3f4f6; --gray-200:#e5e7eb; --gray-300:#d1d5db;
+  --gray-400:#9ca3af; --gray-600:#4b5563; --gray-700:#374151; --gray-900:#111827;
+  --font-d:'DM Serif Display',Georgia,serif;
+  --font-b:'DM Sans',sans-serif;
+  --r:14px; --r-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-b);background:#f5f7f5;color:var(--gray-900);-webkit-font-smoothing:antialiased}
+
+/* NAV */
+nav{background:#fff;border-bottom:1px solid var(--gray-200);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100}
+.logo{font-family:var(--font-d);font-size:22px;color:var(--green);display:flex;align-items:center;gap:8px}
+.live-badge{font-size:11px;background:var(--green-light);color:var(--green);padding:2px 8px;border-radius:20px;font-weight:500;display:flex;align-items:center;gap:4px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* HERO */
+.hero{background:#fff;padding:44px 20px 36px;text-align:center;border-bottom:1px solid var(--gray-200)}
+.hero h1{font-family:var(--font-d);font-size:clamp(26px,5vw,40px);line-height:1.15;margin-bottom:10px}
+.hero h1 em{font-style:italic;color:var(--green)}
+.hero p{font-size:15px;color:var(--gray-600);max-width:440px;margin:0 auto 24px;line-height:1.6}
+
+/* SEARCH */
+.search-wrap{max-width:540px;margin:0 auto}
+.search-row{display:flex;gap:8px}
+.search-box{flex:1;position:relative}
+.search-box svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--gray-400);pointer-events:none}
+input[type=text]{width:100%;height:48px;border:1.5px solid var(--gray-200);border-radius:var(--r);padding:0 14px 0 42px;font-family:var(--font-b);font-size:15px;outline:none;background:var(--gray-50);transition:border-color .15s}
+input[type=text]:focus{border-color:var(--green);background:#fff}
+.btn{height:48px;padding:0 20px;background:var(--green);color:#fff;border:none;border-radius:var(--r);font-family:var(--font-b);font-size:15px;font-weight:500;cursor:pointer;white-space:nowrap;transition:background .15s,transform .1s}
+.btn:hover{background:#155c32}.btn:active{transform:scale(.98)}
+.quick-tags{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.tag{font-size:13px;padding:5px 12px;border-radius:20px;border:1px solid var(--gray-200);background:#fff;color:var(--gray-700);cursor:pointer;transition:all .15s}
+.tag:hover{border-color:var(--green);color:var(--green);background:var(--green-pale)}
+
+/* MAIN */
+.main{max-width:880px;margin:0 auto;padding:28px 16px 80px}
+.tabs{display:flex;gap:4px;background:var(--gray-100);border-radius:var(--r-sm);padding:4px;margin-bottom:22px}
+.tab{flex:1;text-align:center;padding:8px;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--gray-600);border:none;background:none;font-family:var(--font-b)}
+.tab.active{background:#fff;color:var(--gray-900);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.sec-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sec-title{font-size:12px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.07em}
+.btn-ghost{font-size:13px;color:var(--green);background:none;border:none;cursor:pointer;font-family:var(--font-b);font-weight:500}
+
+/* LISTA */
+.product-list{background:#fff;border-radius:var(--r);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:20px;box-shadow:var(--shadow)}
+.prod-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--gray-100);transition:background .1s}
+.prod-item:last-child{border-bottom:none}
+.prod-item:hover{background:var(--gray-50)}
+.prod-emoji{font-size:20px;width:32px;text-align:center;flex-shrink:0}
+.prod-name{flex:1;font-size:14px;font-weight:500}
+.prod-actions{display:flex;align-items:center;gap:6px}
+.qty-btn{width:26px;height:26px;border-radius:50%;border:1px solid var(--gray-200);background:#fff;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-600);transition:all .1s;line-height:1}
+.qty-btn:hover{border-color:var(--green);color:var(--green)}
+.qty-num{font-size:14px;font-weight:500;min-width:18px;text-align:center}
+.rm-btn{background:none;border:none;color:var(--gray-300);cursor:pointer;font-size:17px;padding:2px;line-height:1}
+.rm-btn:hover{color:var(--red)}
+.add-row{display:flex;gap:8px;padding:10px 16px;background:var(--gray-50);border-top:1px solid var(--gray-100)}
+.add-input{flex:1;height:36px;border:1px solid var(--gray-200);border-radius:var(--r-sm);padding:0 12px;font-family:var(--font-b);font-size:14px;background:#fff;outline:none}
+.add-input:focus{border-color:var(--green)}
+.btn-add{height:36px;padding:0 14px;background:var(--green-light);color:var(--green);border:none;border-radius:var(--r-sm);font-family:var(--font-b);font-size:14px;font-weight:600;cursor:pointer}
+.btn-add:hover{background:#d1ead9}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r);padding:14px;text-align:center;box-shadow:var(--shadow)}
+.stat-val{font-family:var(--font-d);font-size:24px;color:var(--green);line-height:1;margin-bottom:3px}
+.stat-lbl{font-size:12px;color:var(--gray-400)}
+
+/* ALERT */
+.alert{background:var(--orange-light);border:1px solid #fbd5b0;border-radius:var(--r);padding:12px 16px;display:flex;gap:10px;align-items:flex-start;margin-bottom:20px;font-size:13px;color:var(--orange);line-height:1.5}
+
+/* COMPARAÇÃO */
+.savings-banner{background:var(--green);color:#fff;border-radius:var(--r);padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:20px;box-shadow:0 8px 32px rgba(26,107,60,.25)}
+.savings-text h3{font-family:var(--font-d);font-size:18px;margin-bottom:3px}
+.savings-text p{font-size:12px;opacity:.85}
+.savings-amount{font-family:var(--font-d);font-size:34px;white-space:nowrap}
+.comp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.super-card{background:#fff;border:1.5px solid var(--gray-200);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);position:relative;transition:transform .15s,box-shadow .15s}
+.super-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.1)}
+.super-card.winner{border-color:var(--green);background:var(--green-pale)}
+.winner-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;font-size:11px;font-weight:600;padding:3px 12px;border-radius:20px;white-space:nowrap}
+.super-logo{font-size:12px;font-weight:600;color:var(--gray-400);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%}
+.super-price{font-family:var(--font-d);font-size:32px;color:var(--gray-900);line-height:1;margin-bottom:3px}
+.super-card.winner .super-price{color:var(--green)}
+.super-savings{font-size:12px;color:var(--gray-400);margin-bottom:14px}
+.super-card.winner .super-savings{color:var(--green-mid);font-weight:500}
+.super-items{display:flex;flex-direction:column;gap:5px}
+.super-item{display:flex;justify-content:space-between;font-size:12px;color:var(--gray-600);padding:3px 0;border-bottom:1px solid var(--gray-100)}
+.super-item:last-child{border-bottom:none}
+.item-cheap{color:var(--green);font-weight:500}
+.item-exp{color:var(--red)}
+.item-promo{font-size:10px;background:var(--orange-light);color:var(--orange);padding:1px 5px;border-radius:4px;margin-left:3px}
+
+/* LOADING */
+.loading{text-align:center;padding:48px 20px;color:var(--gray-400)}
+.spinner{width:32px;height:32px;border:3px solid var(--gray-200);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-box{background:var(--red-light);border:1px solid #fca5a5;border-radius:var(--r);padding:16px;text-align:center;color:var(--red);font-size:14px}
+
+/* HISTÓRICO */
+.hist-list{display:flex;flex-direction:column;gap:8px}
+.hist-item{background:#fff;border:1px solid var(--gray-200);border-radius:var(--r-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;font-size:14px;box-shadow:var(--shadow)}
+.hist-date{color:var(--gray-400);font-size:12px;margin-top:2px}
+.hist-super{font-weight:500;color:var(--green)}
+.hist-saving{font-size:12px;color:var(--green);background:var(--green-light);padding:2px 8px;border-radius:20px}
+.hist-price{font-weight:600}
+
+/* FOOTER */
+footer{background:#fff;border-top:1px solid var(--gray-200);padding:18px 20px;text-align:center;font-size:12px;color:var(--gray-400)}
+.foot-logo{font-family:var(--font-d);color:var(--green);font-size:15px;margin-bottom:3px}
+
+@media(max-width:600px){
+  .hero{padding:28px 16px 24px}
+  .search-row{flex-direction:column}
+  .btn{width:100%}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .savings-banner{flex-direction:column;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🛒 PoupeJá</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="live-badge"><span class="live-dot"></span>Preços ao vivo</div>
+    <div id="ultima-atualizacao" style="font-size:11px;color:var(--gray-400)"></div>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>Compra mais barato.<br><em>Sempre.</em></h1>
+  <p>Compara preços reais do Continente, Pingo Doce e Lidl, atualizados todos os dias.</p>
+  <div class="search-wrap">
+    <div class="search-row">
+      <div class="search-box">
+        <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Pesquisa um produto... ex: leite, arroz, frango">
+      </div>
+      <button class="btn" onclick="addFromSearch()">Adicionar</button>
+    </div>
+    <div class="quick-tags">
+      <span class="tag" onclick="addTag('🥛','Leite Mimosa 1L','leite-mimosa-1l')">🥛 Leite</span>
+      <span class="tag" onclick="addTag('🍞','Pão de forma','pao-de-forma')">🍞 Pão</span>
+      <span class="tag" onclick="addTag('🥚','Ovos M (12 un.)','ovos-m-12')">🥚 Ovos</span>
+      <span class="tag" onclick="addTag('🍗','Frango inteiro','frango-inteiro')">🍗 Frango</span>
+      <span class="tag" onclick="addTag('🫒','Azeite virgem 1L','azeite-1l')">🫒 Azeite</span>
+      <span class="tag" onclick="addTag('🍚','Arroz agulha 1kg','arroz-agulha-1kg')">🍚 Arroz</span>
+      <span class="tag" onclick="addTag('☕','Café Delta 250g','cafe-delta-250g')">☕ Café</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('lista',this)">📋 A minha lista</button>
+    <button class="tab" onclick="showTab('comparar',this)">📊 Comparar</button>
+    <button class="tab" onclick="showTab('historico',this)">📈 Histórico</button>
+  </div>
+
+  <!-- TAB LISTA -->
+  <div id="tab-lista">
+    <div class="sec-header">
+      <span class="sec-title">Lista de compras</span>
+      <button class="btn-ghost" onclick="showTab('comparar',document.querySelectorAll('.tab')[1])">Ver comparação →</button>
+    </div>
+    <div class="product-list">
+      <div id="prodList"></div>
+      <div class="add-row">
+        <input class="add-input" type="text" id="addInput" placeholder="Adicionar produto...">
+        <button class="btn-add" onclick="addManual()">+ Adicionar</button>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-val" id="nProd">0</div><div class="stat-lbl">Produtos na lista</div></div>
+      <div class="stat-card"><div class="stat-val">3</div><div class="stat-lbl">Supermercados</div></div>
+      <div class="stat-card"><div class="stat-val" id="nPromo" style="color:var(--orange)">–</div><div class="stat-lbl">Em promoção hoje</div></div>
+    </div>
+    <div id="promo-alert" style="display:none" class="alert">
+      <span style="font-size:18px">⚡</span>
+      <div id="promo-text"></div>
+    </div>
+  </div>
+
+  <!-- TAB COMPARAR -->
+  <div id="tab-comparar" style="display:none">
+    <div id="comp-loading" class="loading"><div class="spinner"></div>A carregar preços reais...</div>
+    <div id="comp-error" class="error-box" style="display:none"></div>
+    <div id="comp-content" style="display:none">
+      <div class="savings-banner">
+        <div class="savings-text">
+          <h3>Poupas esta semana</h3>
+          <p>Comparado com o supermercado mais caro</p>
+        </div>
+        <div class="savings-amount" id="total-poupanca">–</div>
+      </div>
+      <div class="sec-header">
+        <span class="sec-title">Preço total por supermercado</span>
+        <span id="data-atualizacao" style="font-size:11px;color:var(--gray-400)"></span>
+      </div>
+      <div class="comp-grid" id="compGrid"></div>
+      <div id="dica-mista" style="background:#fff;border:1px solid var(--gray-200);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)"></div>
+    </div>
+  </div>
+
+  <!-- TAB HISTÓRICO -->
+  <div id="tab-historico" style="display:none">
+    <div class="sec-header">
+      <span class="sec-title">Evolução de preços</span>
+    </div>
+    <div id="hist-loading" class="loading"><div class="spinner"></div>A carregar histórico...</div>
+    <div id="hist-content" style="display:none">
+      <div class="stats-row" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-val" id="h-poupado">–</div><div class="stat-lbl">Poupança potencial/mês</div></div>
+        <div class="stat-card"><div class="stat-val" id="h-produtos">–</div><div class="stat-lbl">Produtos monitorizados</div></div>
+        <div class="stat-card"><div class="stat-val" id="h-promos">–</div><div class="stat-lbl">Promoções ativas</div></div>
+      </div>
+      <div class="hist-list" id="histList"></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="foot-logo">🛒 PoupeJá</div>
+  Preços reais, atualizados diariamente · Continente · Pingo Doce · Lidl
+</footer>
+
+<script>
+// ─── Supabase client ───
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── Estado ───
+let lista = JSON.parse(localStorage.getItem('poupeja-lista') || '[]');
+let precosCache = null;
+const SUPERMERCADOS = {
+  continente: { label: 'Continente', cor: '#0066cc' },
+  pingodoce:  { label: 'Pingo Doce', cor: '#e30613' },
+  lidl:       { label: 'Lidl',       cor: '#ffcc00' },
+};
+
+// ─── Emojis fallback ───
+const emojiMap = { leite:'🥛',pão:'🍞',ovos:'🥚',frango:'🍗',queijo:'🧀',azeite:'🫒',arroz:'🍚',detergente:'🧴',tomate:'🍅',banana:'🍌',iogurte:'🥛',água:'💧',manteiga:'🧈',café:'☕',massa:'🍝' };
+function getEmoji(n) { const l=n.toLowerCase(); for(const [k,v] of Object.entries(emojiMap)) if(l.includes(k)) return v; return '🛒'; }
+
+// ─── Lista ───
+function saveLista() { localStorage.setItem('poupeja-lista', JSON.stringify(lista)); }
+
+function renderLista() {
+  const el = document.getElementById('prodList');
+  if (!lista.length) { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);font-size:14px">A lista está vazia. Adiciona produtos acima.</div>'; }
+  else el.innerHTML = lista.map((p,i) => `
+    <div class="prod-item">
+      <div class="prod-emoji">${p.emoji}</div>
+      <div class="prod-name">${p.nome}</div>
+      <div class="prod-actions">
+        <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
+        <span class="qty-num">${p.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+        <button class="rm-btn" onclick="rmItem(${i})">×</button>
+      </div>
+    </div>`).join('');
+  document.getElementById('nProd').textContent = lista.length;
+  precosCache = null; // forçar recarregar preços
+}
+
+function changeQty(i,d) { lista[i].qty = Math.max(1, lista[i].qty+d); saveLista(); renderLista(); }
+function rmItem(i)       { lista.splice(i,1); saveLista(); renderLista(); }
+
+function addTag(emoji, nome, id) {
+  if (lista.find(p=>p.id===id)) return;
+  lista.push({ emoji, nome, id, qty:1 });
+  saveLista(); renderLista();
+}
+
+function addManual() {
+  const inp = document.getElementById('addInput');
+  const v = inp.value.trim(); if(!v) return;
+  lista.push({ emoji:getEmoji(v), nome:v, id:null, qty:1 });
+  inp.value=''; saveLista(); renderLista();
+}
+
+function addFromSearch() {
+  const inp = document.getElementById('searchInput');
+  const v = inp.value.trim(); if(!v) return;
+  lista.push({ emoji:getEmoji(v), nome:v, id:null, qty:1 });
+  inp.value=''; saveLista(); renderLista();
+  showTab('lista', document.querySelectorAll('.tab')[0]);
+}
+
+// ─── Carregar preços do Supabase ───
+async function carregarPrecos() {
+  if (precosCache) return precosCache;
+
+  // IDs dos produtos na lista que existem na BD
+  const ids = lista.filter(p=>p.id).map(p=>p.id);
+  if (!ids.length) return {};
+
+  const { data, error } = await db
+    .from('precos_hoje')
+    .select('*')
+    .in('produto_id', ids);
+
+  if (error) throw error;
+
+  // Organizar por produto_id > supermercado
+  const mapa = {};
+  for (const row of data) {
+    if (!mapa[row.produto_id]) mapa[row.produto_id] = {};
+    mapa[row.produto_id][row.supermercado] = row;
+  }
+  precosCache = mapa;
+  return mapa;
+}
+
+// ─── Renderizar comparação ───
+async function renderComparar() {
+  document.getElementById('comp-loading').style.display='block';
+  document.getElementById('comp-content').style.display='none';
+  document.getElementById('comp-error').style.display='none';
+
+  try {
+    const precos = await carregarPrecos();
+    const ids_com_preco = lista.filter(p=>p.id && precos[p.id]);
+
+    if (!ids_com_preco.length) {
+      document.getElementById('comp-loading').style.display='none';
+      document.getElementById('comp-error').style.display='block';
+      document.getElementById('comp-error').textContent = 'Adiciona produtos à lista para ver a comparação.';
+      return;
+    }
+
+    // Calcular total por supermercado
+    const totais = { continente:0, pingodoce:0, lidl:0 };
+    for (const p of lista) {
+      if (!p.id || !precos[p.id]) continue;
+      for (const super_ of Object.keys(totais)) {
+        const r = precos[p.id][super_];
+        if (r) totais[super_] += r.preco * p.qty;
+      }
+    }
+
+    // Supermercado mais barato
+    const validos = Object.entries(totais).filter(([,v])=>v>0);
+    validos.sort(([,a],[,b])=>a-b);
+    const [winner, winnerTotal] = validos[0];
+    const [pior, piorTotal] = validos[validos.length-1];
+    const poupanca = piorTotal - winnerTotal;
+
+    document.getElementById('total-poupanca').textContent = poupanca.toFixed(2)+'€';
+    document.getElementById('data-atualizacao').textContent = 'Atualizado hoje';
+
+    // Renderizar cards
+    const grid = document.getElementById('compGrid');
+    grid.innerHTML = validos.map(([super_, total]) => {
+      const isWinner = super_ === winner;
+      const s = SUPERMERCADOS[super_];
+      const diff = total - winnerTotal;
+      const items = lista.filter(p=>p.id && precos[p.id]?.[super_]).slice(0,5);
+
+      return `<div class="super-card${isWinner?' winner':''}">
+        ${isWinner?'<div class="winner-badge">🏆 Mais barato</div>':''}
+        <div class="super-logo"><div class="dot" style="background:${s.cor}"></div>${s.label}</div>
+        <div class="super-price">${total.toFixed(2)}€</div>
+        <div class="super-savings">${isWinner?`Poupas ${poupanca.toFixed(2)}€`:`Mais caro em ${diff.toFixed(2)}€`}</div>
+        <div class="super-items">
+          ${items.map(p=>{
+            const r = precos[p.id][super_];
+            const precos_lista = Object.values(precos[p.id]).map(x=>x.preco).filter(Boolean);
+            const min_preco = Math.min(...precos_lista);
+            const is_cheap = r.preco === min_preco;
+            const is_exp   = r.preco === Math.max(...precos_lista) && precos_lista.length > 1;
+            return `<div class="super-item">
+              <span>${p.emoji} ${p.nome}</span>
+              <span class="${is_cheap?'item-cheap':is_exp?'item-exp':''}">${(r.preco*p.qty).toFixed(2)}€${r.em_promocao?'<span class="item-promo">Promo</span>':''}</span>
+            </div>`;
+          }).join('')}
+          ${lista.filter(p=>p.id&&precos[p.id]?.[super_]).length>5?`<div style="font-size:12px;color:var(--gray-400);font-style:italic;padding-top:4px">+${lista.filter(p=>p.id&&precos[p.id]?.[super_]).length-5} produtos...</div>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    // Dica mista
+    const dica = document.getElementById('dica-mista');
+    const prodsMaisBaratos = {};
+    for (const p of lista) {
+      if (!p.id || !precos[p.id]) continue;
+      let melhor = null, melhorS = null;
+      for (const [s, r] of Object.entries(precos[p.id])) {
+        if (!melhor || r.preco < melhor) { melhor = r.preco; melhorS = s; }
+      }
+      if (melhorS) { prodsMaisBaratos[melhorS] = (prodsMaisBaratos[melhorS]||0)+1; }
+    }
+    const dicaLinhas = Object.entries(prodsMaisBaratos).map(([s,n])=>`<span style="font-size:13px;padding:4px 12px;border-radius:20px;background:${s==='continente'?'#eff6ff':s==='pingodoce'?'#fef2f2':'#fffbeb'};color:${SUPERMERCADOS[s].cor}">${SUPERMERCADOS[s].label}: ${n} produto${n>1?'s':''}</span>`).join('');
+    dica.innerHTML = `<div style="font-size:13px;color:var(--gray-600);line-height:1.7;margin-bottom:10px">💡 <strong>Estratégia mista:</strong> Se distribuíres as compras pelo supermercado mais barato em cada produto, poupas ainda mais.</div><div style="display:flex;gap:8px;flex-wrap:wrap">${dicaLinhas}</div>`;
+
+    // Promoções
+    const promos = [];
+    for (const p of lista) {
+      if (!p.id || !precos[p.id]) continue;
+      for (const [s,r] of Object.entries(precos[p.id])) {
+        if (r.em_promocao) promos.push(`${p.emoji} ${p.nome} em promoção no ${SUPERMERCADOS[s].label}`);
+      }
+    }
+    document.getElementById('nPromo').textContent = promos.length || '0';
+    if (promos.length) {
+      document.getElementById('promo-alert').style.display='flex';
+      document.getElementById('promo-text').innerHTML = `<strong>${promos.length} promoç${promos.length>1?'ões':'ão'} ativas!</strong> ${promos[0]}${promos.length>1?` e mais ${promos.length-1}.`:''}`;
+    }
+
+    document.getElementById('comp-loading').style.display='none';
+    document.getElementById('comp-content').style.display='block';
+
+  } catch(e) {
+    document.getElementById('comp-loading').style.display='none';
+    document.getElementById('comp-error').style.display='block';
+    document.getElementById('comp-error').textContent = 'Erro ao carregar preços: '+e.message;
+    console.error(e);
+  }
+}
+
+// ─── Histórico (últimos 7 dias) ───
+async function renderHistorico() {
+  document.getElementById('hist-loading').style.display='block';
+  document.getElementById('hist-content').style.display='none';
+  try {
+    const ids = lista.filter(p=>p.id).map(p=>p.id);
+    if (!ids.length) { document.getElementById('hist-loading').innerHTML='<p style="color:var(--gray-400);font-size:14px">Adiciona produtos à lista para ver o histórico.</p>'; return; }
+
+    const { data, error } = await db
+      .from('precos')
+      .select('produto_id,supermercado,preco,data,em_promocao')
+      .in('produto_id', ids)
+      .gte('data', new Date(Date.now()-7*864e5).toISOString().split('T')[0])
+      .order('data', { ascending: false });
+
+    if (error) throw error;
+
+    // Contar promoções ativas
+    const hoje = new Date().toISOString().split('T')[0];
+    const promos = data.filter(r=>r.data===hoje&&r.em_promocao).length;
+    document.getElementById('h-produtos').textContent = new Set(data.map(r=>r.produto_id)).size;
+    document.getElementById('h-promos').textContent = promos;
+
+    // Calcular poupança estimada mensal
+    const precos_hoje_data = data.filter(r=>r.data===hoje);
+    let poupanca_diaria = 0;
+    const por_produto = {};
+    for (const r of precos_hoje_data) { if(!por_produto[r.produto_id]) por_produto[r.produto_id]=[]; por_produto[r.produto_id].push(r.preco); }
+    for (const ps of Object.values(por_produto)) { poupanca_diaria += Math.max(...ps) - Math.min(...ps); }
+    document.getElementById('h-poupado').textContent = (poupanca_diaria*4).toFixed(2)+'€';
+
+    // Listar variações de preço
+    const hist = document.getElementById('histList');
+    const datas = [...new Set(data.map(r=>r.data))].slice(0,7);
+    hist.innerHTML = datas.map(d=>{
+      const do_dia = data.filter(r=>r.data===d);
+      const por_super = {};
+      for (const r of do_dia) { if(!por_super[r.supermercado]) por_super[r.supermercado]=0; por_super[r.supermercado]+=r.preco; }
+      const entries = Object.entries(por_super).sort(([,a],[,b])=>a-b);
+      if (!entries.length) return '';
+      const [best_s, best_p] = entries[0];
+      const [worst_s, worst_p] = entries[entries.length-1];
+      const economia = worst_p - best_p;
+      const label = d===hoje?'Hoje':new Date(d+'T12:00:00').toLocaleDateString('pt-PT',{weekday:'short',day:'numeric',month:'short'});
+      return `<div class="hist-item">
+        <div><div style="font-weight:500">${label} · ${do_dia.length} preços</div><div class="hist-date">${d}</div></div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="hist-super">${SUPERMERCADOS[best_s]?.label||best_s}</span>
+          <span class="hist-price">${best_p.toFixed(2)}€</span>
+          ${economia>0?`<span class="hist-saving">−${economia.toFixed(2)}€</span>`:''}
+        </div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('hist-loading').style.display='none';
+    document.getElementById('hist-content').style.display='block';
+  } catch(e) {
+    document.getElementById('hist-loading').innerHTML='<div class="error-box">Erro: '+e.message+'</div>';
+  }
+}
+
+// ─── Última atualização ───
+async function carregarUltimaAtualizacao() {
+  try {
+    const { data } = await db.from('config').select('valor').eq('chave','ultima_atualizacao').single();
+    if (data) {
+      const d = new Date(data.valor);
+      document.getElementById('ultima-atualizacao').textContent = 'Atualizado: '+d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
+    }
+  } catch(e) {}
+}
+
+// ─── Tabs ───
+function showTab(tab, btn) {
+  ['lista','comparar','historico'].forEach(t=>document.getElementById('tab-'+t).style.display=t===tab?'block':'none');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if (tab==='comparar') renderComparar();
+  if (tab==='historico') renderHistorico();
+}
+
+// ─── Init ───
+document.getElementById('addInput').addEventListener('keydown',e=>e.key==='Enter'&&addManual());
+document.getElementById('searchInput').addEventListener('keydown',e=>e.key==='Enter'&&addFromSearch());
+
+// Lista inicial por defeito se vazia
+if (!lista.length) {
+  lista = [
+    {emoji:'🥛',nome:'Leite Mimosa 1L',id:'leite-mimosa-1l',qty:2},
+    {emoji:'🍞',nome:'Pão de forma',id:'pao-de-forma',qty:1},
+    {emoji:'🥚',nome:'Ovos M (12 un.)',id:'ovos-m-12',qty:1},
+    {emoji:'🍗',nome:'Frango inteiro',id:'frango-inteiro',qty:1},
+    {emoji:'🧀',nome:'Queijo flamengo',id:'queijo-flamengo',qty:1},
+  ];
+  saveLista();
+}
+
+renderLista();
+carregarUltimaAtualizacao();
+</script>
+</body>
+</html>
